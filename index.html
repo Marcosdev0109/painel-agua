@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Painel de Água AD Floripa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap">
+<style>
+/* Layout: app de celular. Topo com o "hidrômetro" do total vencido, conteúdo em lista, barra de abas fixa embaixo.
+   Ideia visual: o mostrador do hidrômetro (dígitos pretos para reais, vermelhos para centavos) é o único elemento ousado. */
+:root{
+  --fundo:#E9F0F2; --papel:#FFFFFF; --tinta:#0F2B33; --tinta2:#4C6670; --tinta3:#7E949C; --linha:#D3E0E4;
+  --agua:#0A6E8A; --agua-claro:#D5EBF1; --agua-vivo:#1597B8;
+  --vencida:#C33A2A; --vencida-bg:#FBE4E0;
+  --avencer:#B07405; --avencer-bg:#FBEFD5;
+  --ok:#2C8556; --ok-bg:#DDF2E6;
+  --neutro:#7E949C; --neutro-bg:#E5ECEE;
+  --mostrador:#13181A; --digito:#F4F6F5; --digito-red:#E0402D;
+  --display:"Bricolage Grotesque", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --corpo:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r-g:22px; --r-m:14px; --r-p:999px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fundo:#0C1A1F; --papel:#132A31; --tinta:#E4F0F2; --tinta2:#A5BDC4; --tinta3:#7B959D; --linha:#23414A;
+    --agua:#4FB8D4; --agua-claro:#163C47; --agua-vivo:#6CCDE6;
+    --vencida:#F07A69; --vencida-bg:#3B201C; --avencer:#E7B355; --avencer-bg:#3A2D12; --ok:#6CCB97; --ok-bg:#16352A;
+    --neutro:#8AA2A9; --neutro-bg:#1C333A; --mostrador:#05090A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --fundo:#0C1A1F; --papel:#132A31; --tinta:#E4F0F2; --tinta2:#A5BDC4; --tinta3:#7B959D; --linha:#23414A;
+  --agua:#4FB8D4; --agua-claro:#163C47; --agua-vivo:#6CCDE6;
+  --vencida:#F07A69; --vencida-bg:#3B201C; --avencer:#E7B355; --avencer-bg:#3A2D12; --ok:#6CCB97; --ok-bg:#16352A;
+  --neutro:#8AA2A9; --neutro-bg:#1C333A; --mostrador:#05090A; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--fundo);color:var(--tinta);font-family:var(--corpo);font-size:18px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--agua-vivo);outline-offset:2px;border-radius:8px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.num{font-variant-numeric:tabular-nums}
+.app{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 110px)}
+.tela{display:flex;flex-direction:column;gap:18px}
+.tela[hidden]{display:none}
+
+/* ---------- topo ---------- */
+.marca{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.marca h1{font-size:25px;font-weight:800}
+.marca p{margin:0;color:var(--tinta2);font-size:15.5px}
+.gota{width:44px;height:44px;flex:0 0 auto}
+
+/* ---------- hidrômetro ---------- */
+.medidor{background:var(--mostrador);color:#fff;border-radius:var(--r-g);padding:20px 18px 18px;position:relative;overflow:hidden}
+.medidor::after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(21,151,184,.35),transparent 70%);pointer-events:none}
+.medidor .rot{font-size:16px;color:#B9C7CB;margin:0 0 10px}
+.contador{display:flex;align-items:flex-end;gap:4px;flex-wrap:nowrap}
+.contador .rs{font-family:var(--display);font-size:22px;font-weight:700;margin-right:6px;padding-bottom:8px;color:#B9C7CB}
+.dg{width:clamp(26px,8.2vw,40px);height:clamp(44px,13vw,60px);background:linear-gradient(180deg,#2A3134,#1A2023 45%,#2A3134);border-radius:7px;
+  overflow:hidden;position:relative;box-shadow:inset 0 2px 4px rgba(0,0,0,.6),inset 0 -2px 4px rgba(0,0,0,.6)}
+.dg .rolo{position:absolute;left:0;right:0;top:0;transition:transform 1.4s cubic-bezier(.2,.8,.2,1)}
+.dg .rolo span{display:flex;align-items:center;justify-content:center;height:clamp(44px,13vw,60px);font-family:var(--display);font-weight:700;
+  font-size:clamp(26px,8vw,38px);color:var(--digito);font-variant-numeric:tabular-nums}
+.dg.red .rolo span{color:var(--digito-red)}
+.sep{font-family:var(--display);font-size:30px;font-weight:700;color:#B9C7CB;padding-bottom:4px}
+.medidor .sub{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:14px;font-size:15.5px;color:#D4DEE1}
+.medidor .sub b{color:#fff}
+
+/* ---------- alertas ---------- */
+.alerta{display:flex;gap:12px;align-items:flex-start;background:var(--vencida-bg);border-radius:var(--r-m);padding:14px 16px;border:0;text-align:left;width:100%}
+.alerta .ic{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--vencida);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+.alerta b{display:block;color:var(--vencida);font-size:17.5px}
+.alerta span{font-size:16px;color:var(--tinta)}
+
+/* ---------- blocos ---------- */
+.bloco{background:var(--papel);border-radius:var(--r-g);padding:18px}
+.bloco h2{font-size:21px;font-weight:700}
+.bloco .leg{margin:4px 0 14px;color:var(--tinta2);font-size:16px;max-width:60ch}
+.insight{background:var(--agua-claro);color:var(--tinta);border-radius:var(--r-m);padding:12px 14px;font-size:16.5px;margin-top:14px}
+.insight b{color:var(--agua)}
+.vazio{color:var(--tinta2);font-size:16.5px;padding:14px;border:2px dashed var(--linha);border-radius:var(--r-m);text-align:center}
+
+/* ---------- linhas de congregação ---------- */
+.grupo-t{display:flex;align-items:baseline;justify-content:space-between;margin:6px 4px 8px}
+.grupo-t h3{font-size:18px;font-weight:700}
+.grupo-t span{color:var(--tinta2);font-size:15.5px}
+.lista{background:var(--papel);border-radius:var(--r-g);overflow:hidden}
+.item{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;border-bottom:1px solid var(--linha);padding:14px 16px;text-align:left}
+.item:last-child{border-bottom:0}
+.item:active{background:var(--fundo)}
+.ponto{width:12px;height:12px;border-radius:50%;flex:0 0 auto;background:var(--neutro)}
+.ponto.vencida{background:var(--vencida);box-shadow:0 0 0 4px var(--vencida-bg)}
+.ponto.a-vencer{background:var(--avencer);box-shadow:0 0 0 4px var(--avencer-bg)}
+.item .nm{flex:1;min-width:0}
+.item .nm b{display:block;font-size:17.5px;line-height:1.3}
+.item .nm small{display:block;color:var(--tinta2);font-size:15px}
+.item .vl{text-align:right;flex:0 0 auto}
+.item .vl b{display:block;font-size:17.5px;font-variant-numeric:tabular-nums}
+.item .vl small{font-size:14px;color:var(--tinta2)}
+.item .vl small.atraso{color:var(--vencida);font-weight:700}
+.chev{color:var(--tinta3);flex:0 0 auto}
+
+.busca{display:flex;align-items:center;gap:10px;background:var(--papel);border-radius:var(--r-p);padding:4px 6px 4px 16px;border:2px solid transparent}
+.busca:focus-within{border-color:var(--agua-vivo)}
+.busca input{flex:1;border:0;background:none;padding:10px 0;font-size:17.5px;min-width:0}
+.busca input:focus{outline:none}
+.segs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.segs::-webkit-scrollbar{display:none}
+.seg{flex:0 0 auto;border:0;background:var(--papel);color:var(--tinta2);border-radius:var(--r-p);padding:9px 15px;font-size:16px;font-weight:700}
+.seg[aria-pressed="true"]{background:var(--tinta);color:var(--papel)}
+.seg i{font-style:normal;opacity:.7;margin-left:4px}
+
+/* ---------- gráficos ---------- */
+.barra-dupla{display:flex;height:34px;border-radius:10px;overflow:hidden;background:var(--fundo)}
+.barra-dupla span{display:block;height:100%}
+.legenda{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;font-size:15.5px}
+.legenda i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-1px}
+.hb{display:flex;flex-direction:column;gap:12px}
+.hb-l{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:baseline}
+.hb-l .n{font-size:16.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb-l .v{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.hb-l .t{grid-column:1/-1;height:12px;background:var(--fundo);border-radius:6px;overflow:hidden}
+.hb-l .t span{display:block;height:100%;border-radius:6px;background:var(--agua);transform-origin:left;animation:cresce .9s cubic-bezier(.2,.8,.2,1) both}
+.hb-l .t span.vencida{background:var(--vencida)} .hb-l .t span.a-vencer{background:var(--avencer)}
+.hb-l .s{grid-column:1/-1;font-size:14.5px;color:var(--tinta2);margin-top:-2px}
+@keyframes cresce{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.colunas{display:flex;align-items:flex-end;gap:8px;height:190px;padding-top:24px;border-bottom:2px solid var(--linha)}
+.col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;position:relative}
+.col .b{width:100%;max-width:54px;border-radius:10px 10px 4px 4px;background:var(--agua);animation:sobe .9s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom}
+.col .b.vencida{background:var(--vencida)} .col .b.avencer{background:var(--avencer)} .col .b.fraco{background:var(--agua-claro)}
+.col .rt{font-size:14px;font-weight:700;margin-bottom:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.eixo{display:flex;gap:8px;margin-top:6px}
+.eixo span{flex:1;text-align:center;font-size:14px;color:var(--tinta2);min-width:0}
+@keyframes sobe{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.agenda{display:flex;flex-direction:column;gap:0}
+.dia{display:grid;grid-template-columns:58px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--linha)}
+.dia:last-child{border-bottom:0}
+.cal{border-radius:12px;background:var(--fundo);text-align:center;padding:6px 0;line-height:1.1}
+.cal b{display:block;font-family:var(--display);font-size:22px}
+.cal small{font-size:13px;color:var(--tinta2);text-transform:lowercase}
+.cal.vencida{background:var(--vencida-bg)} .cal.vencida b{color:var(--vencida)}
+.cal.perto{background:var(--avencer-bg)} .cal.perto b{color:var(--avencer)}
+.dia .q{font-size:16.5px} .dia .q small{display:block;color:var(--tinta2);font-size:14.5px}
+.dia .v{font-weight:700;font-variant-numeric:tabular-nums}
+.anel{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.anel svg{flex:0 0 auto}
+.anel .lst{display:flex;flex-direction:column;gap:8px;font-size:16px;flex:1;min-width:170px}
+.anel .lst div{display:flex;justify-content:space-between;gap:10px}
+.anel .lst i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:8px}
+.tbl{width:100%;border-collapse:collapse;font-size:16px}
+.tbl td{padding:10px 4px;border-bottom:1px solid var(--linha);vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.r{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl small{display:block;color:var(--tinta2);font-size:14px}
+.selo{display:inline-block;font-size:13.5px;font-weight:700;padding:2px 10px;border-radius:var(--r-p);white-space:nowrap;vertical-align:1px}
+.selo.vencida{background:var(--vencida-bg);color:var(--vencida)} .selo.a-vencer{background:var(--avencer-bg);color:var(--avencer)}
+.selo.ok{background:var(--ok-bg);color:var(--ok)} .selo.neutro{background:var(--neutro-bg);color:var(--neutro)}
+
+/* ---------- ficha (bottom sheet) ---------- */
+.veu{position:fixed;inset:0;background:rgba(6,20,24,.5);z-index:30;opacity:0;transition:opacity .25s}
+.veu.on{opacity:1}
+.ficha{position:fixed;left:0;right:0;bottom:0;z-index:31;max-height:88%;background:var(--fundo);border-radius:26px 26px 0 0;
+  transform:translateY(100%);transition:transform .32s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;max-width:640px;margin:0 auto}
+.ficha.on{transform:none}
+.ficha .alca{width:44px;height:5px;border-radius:3px;background:var(--linha);margin:10px auto 0}
+.ficha .cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 18px 6px}
+.ficha .cab h2{font-size:24px;font-weight:800}
+.ficha .cab p{margin:2px 0 0;color:var(--tinta2);font-size:15.5px}
+.fechar{border:0;background:var(--papel);border-radius:50%;width:42px;height:42px;font-size:20px;flex:0 0 auto}
+.ficha .corpo{overflow-y:auto;padding:8px 16px calc(env(safe-area-inset-bottom,0px) + 22px);display:flex;flex-direction:column;gap:14px}
+.copias{display:grid;grid-template-columns:1fr;gap:10px}
+.copia{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.copia{border:0;background:var(--papel);border-radius:var(--r-m);padding:12px 14px;text-align:left}
+.copia small{display:block;color:var(--tinta2);font-size:14px}
+.copia b{font-size:17px;font-variant-numeric:tabular-nums;word-break:break-all}
+.copia.ok{background:var(--ok-bg)} .copia.ok small{color:var(--ok)}
+.botao{display:block;text-align:center;text-decoration:none;background:var(--agua);color:#fff;border-radius:var(--r-m);padding:15px;font-weight:700;font-size:17.5px;border:0;width:100%}
+.botao.sec{background:var(--papel);color:var(--agua)}
+.dica{font-size:15px;color:var(--tinta2);text-align:center;margin:-4px 0 0}
+.spark{width:100%;height:auto;display:block}
+
+/* ---------- abas ---------- */
+.abas{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--papel) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--linha);padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 8px)}
+.abas div{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.aba{border:0;background:none;border-radius:16px;padding:6px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--tinta3);font-size:13.5px;font-weight:700}
+.aba svg{width:26px;height:26px}
+.aba[aria-pressed="true"]{color:var(--agua);background:var(--agua-claro)}
+.rodape{color:var(--tinta3);font-size:14.5px;text-align:center}
+.prevbar{position:sticky;top:8px;z-index:15;background:var(--avencer);color:#fff;border-radius:var(--r-m);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700;font-size:15.5px}
+.prevbar button{border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:var(--r-p);padding:6px 12px;font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);transform:translateX(-50%);background:var(--tinta);color:var(--papel);padding:10px 18px;border-radius:var(--r-p);font-size:16px;z-index:40;font-weight:700}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- INÍCIO -->
+  <section class="tela" id="t-inicio">
+    <div id="prevbar1"></div>
+    <header class="marca">
+      <div><h1>Painel de Água</h1><p id="sub">AD Floripa · CASAN</p></div>
+      <svg class="gota" viewBox="0 0 44 44" aria-hidden="true"><path d="M22 4C22 4 8 19 8 28a14 14 0 0 0 28 0C36 19 22 4 22 4z" fill="var(--agua)"/><path d="M15 29a7 7 0 0 0 7 7" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/></svg>
+    </header>
+    <div class="medidor" id="medidor"></div>
+    <div id="alertas" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div class="bloco" id="proximos"></div>
+    <div class="bloco" id="maiores"></div>
+  </section>
+
+  <!-- CONGREGAÇÕES -->
+  <section class="tela" id="t-igrejas" hidden>
+    <div id="prevbar2"></div>
+    <header class="marca"><div><h1>Congregações</h1><p id="subIgrejas"></p></div></header>
+    <label class="busca"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <input id="q" type="search" placeholder="Nome ou matrícula" aria-label="Buscar congregação ou matrícula"></label>
+    <div class="segs" id="segs"></div>
+    <div id="grupos" style="display:flex;flex-direction:column;gap:18px"></div>
+  </section>
+
+  <!-- RELATÓRIOS -->
+  <section class="tela" id="t-relatorios" hidden>
+    <div id="prevbar3"></div>
+    <header class="marca"><div><h1>Relatórios</h1><p>O que as faturas lançadas mostram</p></div></header>
+    <div id="relVazio"></div>
+    <div class="bloco" id="r-aberto"></div>
+    <div class="bloco" id="r-atraso"></div>
+    <div class="bloco" id="r-ranking"></div>
+    <div class="bloco" id="r-pareto"></div>
+    <div class="bloco" id="r-pico"></div>
+    <div class="bloco" id="r-tendencia"></div>
+    <div class="bloco" id="r-m3"></div>
+    <div class="bloco" id="r-composicao"></div>
+    <div class="bloco" id="r-agenda"></div>
+    <div class="bloco" id="r-cobertura"></div>
+  </section>
+
+  <!-- PROTOCOLOS -->
+  <section class="tela" id="t-protocolos" hidden>
+    <div id="prevbar4"></div>
+    <header class="marca"><div><h1>Protocolos</h1><p>Pedidos abertos na CASAN e as respostas por e-mail</p></div></header>
+    <div id="protos" style="display:flex;flex-direction:column;gap:12px"></div>
+  </section>
+
+  <p class="rodape" id="atual"></p>
+</div>
+
+<nav class="abas" aria-label="Seções"><div>
+  <button class="aba" data-t="inicio" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s-7 8-7 12a7 7 0 0 0 14 0c0-4-7-12-7-12z" fill="none" stroke="currentColor" stroke-width="2"/></svg>Início</button>
+  <button class="aba" data-t="igrejas" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v5M9.5 4.5h5M5 21V12l7-5 7 5v9M10 21v-5h4v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Igrejas</button>
+  <button class="aba" data-t="relatorios" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Relatórios</button>
+  <button class="aba" data-t="protocolos" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="2"/></svg>Protocolos</button>
+</div></nav>
+
+<div id="fichaHost"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="dados.js"></script>
+<script>
+(function(){
+  "use strict";
+  var MES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  var MESL = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+  function brl(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+  function brl0(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0}); }
+  function n1(v){ return Number(v).toLocaleString("pt-BR",{maximumFractionDigits:1}); }
+  function semAc(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); }
+  function lbMes(k){ var p = k.split("-"); return MES[+p[1]-1] + "/" + p[0].slice(2); }
+  function lbMesL(k){ var p = k.split("-"); return MESL[+p[1]-1] + " de " + p[0]; }
+  function hojeISO(){ return new Date().toLocaleDateString("sv-SE",{timeZone:"America/Sao_Paulo"}); }
+  function isoDe(br){ var p = String(br||"").split("/"); return p.length === 3 ? p[2]+"-"+p[1]+"-"+p[0] : ""; }
+  function dias(a, b){ return Math.round((new Date(b+"T12:00:00") - new Date(a+"T12:00:00"))/86400000); }
+  var HOJE = hojeISO();
+  var CNPJ = window.CNPJ_AD || "";
+
+  /* ---------- dados ---------- */
+  var REAIS = window.UNIDADES || [], PROT_REAIS = window.PROTOCOLOS || [];
+  var previa = !!window.PREVIA, U = [], P = [];
+
+  function preparar(lista){
+    return lista.map(function(o){
+      var u = {}; for(var k in o) u[k] = o[k];
+      u.fornecedor = u.fornecedor || "CASAN";
+      if(u.doc === undefined) u.doc = CNPJ;
+      u.faturas = (u.faturas || []).map(function(f){
+        var g = {}; for(var k2 in f) g[k2] = f[k2];
+        g.vencISO = isoDe(g.venc);
+        g.status = g.vencISO && g.vencISO < HOJE ? "vencida" : "a-vencer";
+        g.atraso = g.status === "vencida" ? dias(g.vencISO, HOJE) : 0;
+        g.falta = g.status === "a-vencer" && g.vencISO ? dias(HOJE, g.vencISO) : null;
+        return g;
+      }).sort(function(a,b){ return a.mes < b.mes ? -1 : 1; });
+      u.consumo = {};
+      u.faturas.forEach(function(f){ if(f.historico) for(var m in f.historico) u.consumo[m] = f.historico[m]; if(f.m3 != null) u.consumo[f.mes] = f.m3; });
+      u.vencidas = u.faturas.filter(function(f){ return f.status === "vencida"; });
+      u.aVencer = u.faturas.filter(function(f){ return f.status === "a-vencer"; });
+      u.totVencido = u.vencidas.reduce(function(s,f){ return s + (f.valor||0); }, 0);
+      u.totAVencer = u.aVencer.reduce(function(s,f){ return s + (f.valor||0); }, 0);
+      u.totAberto = u.totVencido + u.totAVencer;
+      u.maiorAtraso = u.vencidas.reduce(function(m,f){ return Math.max(m, f.atraso); }, 0);
+      u.estado = u.vencidas.length ? "vencida" : u.aVencer.length ? "a-vencer" : "sem";
+      u.ultima = u.faturas[u.faturas.length-1] || null;
+      u.corte = u.aviso || (u.faturas.filter(function(f){ return f.corte; })[0] || {}).corte || "";
+      return u;
+    });
+  }
+  function carregar(){
+    if(previa){ var ex = exemplo(); U = preparar(ex.u); P = ex.p; }
+    else { U = preparar(REAIS); P = PROT_REAIS; }
+  }
+
+  /* ---------- prévia com números fictícios (só para ver o visual) ---------- */
+  function exemplo(){
+    var nomes = (window.UNIDADES || []).map(function(x){ return x.nome; });
+    var seed = 7; function rnd(){ seed = (seed*9301+49297)%233280; return seed/233280; }
+    function d(off){ var t = new Date(HOJE+"T12:00:00"); t.setDate(t.getDate()+off); return t.toLocaleDateString("pt-BR"); }
+    var meses = ["2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10"];
+    var u = nomes.map(function(n,i){
+      var base = 4 + Math.round(rnd()*20), hist = {};
+      meses.forEach(function(m,j){ hist[m] = Math.max(1, Math.round(base*(0.7+rnd()*0.6) + (i===1 && j>3 ? 40*(j-3) : 0) + (i===4 && j===6 ? 60 : 0))); });
+      var fs = [];
+      var nV = i < 3 ? 2 : i < 6 ? 1 : 0;
+      for(var k=0;k<nV;k++){ var mm = meses[6-k-1], m3 = hist[mm]; fs.push({mes:mm, m3:m3, valor:Math.round((92.68 + (m3>10?68.1+(m3-10)*19.14*2:m3*6.81*2))*100)/100, venc:d(-20-k*30-i*6), media6:base, historico:hist,
+        agua:m3*9, esgoto:m3*9, fixa:92.68}); }
+      var m3n = hist["2026-10"]; fs.push({mes:"2026-10", m3:m3n, valor:Math.round((92.68 + (m3n>10?68.1+(m3n-10)*19.14*2:m3n*6.81*2))*100)/100, venc:d(5+i*2), media6:base, historico:hist, agua:m3n*9, esgoto:m3n*9, fixa:92.68});
+      return {nome:n, matricula:String(4100000+i*1373)+"-"+(i%10), fornecedor:(window.UNIDADES[i]||{}).fornecedor, faturas:fs, aviso: i===0 ? "Sujeito a corte a partir de "+d(18)+"." : ""};
+    });
+    return {u:u, p:[{protocolo:"AD0000000/2026", congregacao:nomes[1], tipo:"Revisão de fatura", abertura:d(-12), status:"aguardando", resumo:"Consumo bem acima da média dos últimos 6 meses. Pedido de releitura do hidrômetro e revisão da fatura.", emails:[]}]};
+  }
+
+  /* ---------- hidrômetro ---------- */
+  function medidor(){
+    var vencido = U.reduce(function(s,u){ return s + u.totVencido; }, 0);
+    var aVencer = U.reduce(function(s,u){ return s + u.totAVencer; }, 0);
+    var nIg = U.filter(function(u){ return u.vencidas.length; }).length;
+    var nF = U.reduce(function(s,u){ return s + u.vencidas.length; }, 0);
+    var cent = Math.round(vencido*100), inteiro = Math.floor(cent/100), cs = String(cent%100).padStart(2,"0");
+    var dig = String(inteiro).padStart(5,"0").split("");
+    var html = '<p class="rot">Total vencido em aberto</p><div class="contador" aria-label="'+esc(brl(vencido))+'"><span class="rs" aria-hidden="true">R$</span>';
+    dig.forEach(function(c){ html += rolo(c, false); });
+    html += '<span class="sep" aria-hidden="true">,</span>' + rolo(cs[0], true) + rolo(cs[1], true) + '</div>';
+    html += '<div class="sub"><span><b>'+nF+'</b> fatura'+(nF===1?'':'s')+' vencida'+(nF===1?'':'s')+'</span><span><b>'+nIg+'</b> congregaç'+(nIg===1?'ão':'ões')+'</span><span>A vencer: <b>'+brl(aVencer)+'</b></span></div>';
+    $("medidor").innerHTML = html;
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      Array.prototype.forEach.call(document.querySelectorAll("#medidor .rolo"), function(r){ r.style.transform = "translateY(-" + (r.getAttribute("data-d")*10) + "%)"; });
+    }); });
+  }
+  function rolo(d, red){
+    var s = ""; for(var i=0;i<10;i++) s += "<span>"+i+"</span>";
+    return '<span class="dg'+(red?' red':'')+'" aria-hidden="true"><span class="rolo" data-d="'+d+'">'+s+'</span></span>';
+  }
+
+  /* ---------- início ---------- */
+  function inicio(){
+    medidor();
+    var al = U.filter(function(u){ return u.corte; });
+    $("alertas").innerHTML = al.map(function(u){
+      return '<button class="alerta" data-u="'+esc(u.nome)+'"><span class="ic">!</span><span><b>Risco de corte · '+esc(u.nome)+'</b><span>'+esc(u.corte)+'</span></span></button>';
+    }).join("");
+    var prox = [];
+    U.forEach(function(u){ u.faturas.forEach(function(f){ prox.push({u:u, f:f}); }); });
+    prox.sort(function(a,b){ return a.f.vencISO < b.f.vencISO ? -1 : 1; });
+    $("proximos").innerHTML = '<h2>Vencimentos</h2><p class="leg">Vencidas primeiro, depois as próximas a vencer.</p>' + (prox.length ? agenda(prox.slice(0,8)) : vazio("Quando as faturas forem lançadas, os vencimentos aparecem aqui em ordem."));
+    var top = U.filter(function(u){ return u.totAberto > 0; }).sort(function(a,b){ return b.totAberto - a.totAberto; }).slice(0,5);
+    $("maiores").innerHTML = '<h2>Maiores valores em aberto</h2><p class="leg">Toque numa congregação para ver as faturas.</p>' + (top.length ? barrasAberto(top) : vazio("Nenhuma fatura lançada ainda."));
+  }
+  function agenda(itens){
+    return '<div class="agenda">' + itens.map(function(x){
+      var f = x.f, p = f.vencISO.split("-");
+      var cls = f.status === "vencida" ? "vencida" : (f.falta != null && f.falta <= 7 ? "perto" : "");
+      var quando = f.status === "vencida" ? '<span class="selo vencida">'+f.atraso+' dia'+(f.atraso===1?'':'s')+' de atraso</span>' : (f.falta === 0 ? '<span class="selo a-vencer">vence hoje</span>' : '<span class="selo '+(f.falta<=7?'a-vencer':'neutro')+'">em '+f.falta+' dia'+(f.falta===1?'':'s')+'</span>');
+      return '<button class="dia" data-u="'+esc(x.u.nome)+'" style="border:0;border-bottom:1px solid var(--linha);background:none;text-align:left;width:100%">'
+        + '<span class="cal '+cls+'"><b>'+p[2]+'</b><small>'+MES[+p[1]-1]+'</small></span>'
+        + '<span class="q"><b>'+esc(x.u.nome)+'</b><small>fatura de '+lbMes(f.mes)+' · '+quando+'</small></span>'
+        + '<span class="v">'+brl(f.valor)+'</span></button>';
+    }).join("") + '</div>';
+  }
+  function barrasAberto(lista){
+    var max = Math.max.apply(null, lista.map(function(u){ return u.totAberto; }).concat([1]));
+    return '<div class="hb">' + lista.map(function(u){
+      var wv = u.totVencido/max*100, wa = u.totAVencer/max*100;
+      return '<button class="hb-l" data-u="'+esc(u.nome)+'" style="border:0;background:none;padding:0;text-align:left;width:100%">'
+        + '<span class="n">'+esc(u.nome)+'</span><span class="v">'+brl(u.totAberto)+'</span>'
+        + '<span class="t" style="display:flex"><span class="vencida" style="width:'+wv+'%;border-radius:6px 0 0 6px"></span><span class="a-vencer" style="width:'+wa+'%;border-radius:0 6px 6px 0"></span></span>'
+        + '<span class="s">'+(u.totVencido ? brl(u.totVencido)+' vencido' : '')+(u.totVencido && u.totAVencer ? ' · ' : '')+(u.totAVencer ? brl(u.totAVencer)+' a vencer' : '')+'</span></button>';
+    }).join("") + '</div>';
+  }
+  function vazio(t){ return '<div class="vazio">'+esc(t)+'</div>'; }
+
+  /* ---------- congregações ---------- */
+  var filtro = "todas", termo = "";
+  function igrejas(){
+    var c = {vencida:0,"a-vencer":0,sem:0}; U.forEach(function(u){ c[u.estado]++; });
+    $("subIgrejas").textContent = U.length + " unidades consumidoras";
+    $("segs").innerHTML = [["todas","Todas",U.length],["vencida","Vencidas",c.vencida],["a-vencer","A vencer",c["a-vencer"]],["sem","Sem fatura",c.sem]].map(function(o){
+      return '<button class="seg" data-f="'+o[0]+'" aria-pressed="'+(filtro===o[0])+'">'+o[1]+'<i>'+o[2]+'</i></button>';
+    }).join("");
+    var t = semAc(termo), td = termo.replace(/\D/g,"");
+    var vis = U.filter(function(u){
+      if(filtro !== "todas" && u.estado !== filtro) return false;
+      return !t || semAc(u.nome).indexOf(t) >= 0 || (td && String(u.matricula).replace(/\D/g,"").indexOf(td) >= 0);
+    });
+    var grupos = [["vencida","Com fatura vencida"],["a-vencer","Só faturas a vencer"],["sem","Sem fatura lançada"]];
+    var html = grupos.map(function(g){
+      var l = vis.filter(function(u){ return u.estado === g[0]; });
+      if(!l.length) return "";
+      l.sort(function(a,b){ return (b.totAberto - a.totAberto) || a.nome.localeCompare(b.nome,"pt-BR"); });
+      var soma = l.reduce(function(s,u){ return s + u.totAberto; }, 0);
+      return '<div><div class="grupo-t"><h3>'+g[1]+'</h3><span>'+l.length+(soma ? ' · '+brl(soma) : '')+'</span></div><div class="lista">'
+        + l.map(itemHTML).join("") + '</div></div>';
+    }).join("");
+    $("grupos").innerHTML = html || vazio("Nenhuma congregação encontrada.");
+  }
+  function itemHTML(u){
+    var dir = u.estado === "sem" ? '<small>sem fatura</small>'
+      : '<b>'+brl(u.totAberto)+'</b>' + (u.maiorAtraso ? '<small class="atraso">'+u.maiorAtraso+' dias de atraso</small>' : '<small>a vencer</small>');
+    return '<button class="item" data-u="'+esc(u.nome)+'"><span class="ponto '+u.estado+'"></span>'
+      + '<span class="nm"><b>'+esc(u.nome)+(u.corte ? ' <span class="selo vencida">corte</span>' : '')+'</b><small>'+(u.matricula ? 'UC '+esc(u.matricula) : 'sem matrícula')+(u.fornecedor !== "CASAN" ? ' · '+esc(u.fornecedor) : '')+'</small></span>'
+      + '<span class="vl">'+dir+'</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></button>';
+  }
+
+  /* ---------- ficha da congregação ---------- */
+  function abrirFicha(nome){
+    var u = U.filter(function(x){ return x.nome === nome; })[0]; if(!u) return;
+    var docT = String(u.doc).indexOf("/") >= 0 ? "CNPJ do titular" : "CPF do titular";
+    var html = '<div class="veu" id="veu"></div><aside class="ficha" id="ficha" role="dialog" aria-modal="true" aria-label="'+esc(u.nome)+'">'
+      + '<div class="alca"></div><div class="cab"><div><h2>'+esc(u.nome)+'</h2><p>'+(u.estado==="vencida"?'<span class="selo vencida">'+u.vencidas.length+' vencida'+(u.vencidas.length===1?'':'s')+'</span> ':'')+(u.aVencer.length?'<span class="selo a-vencer">'+u.aVencer.length+' a vencer</span> ':'')+(u.estado==="sem"?'<span class="selo neutro">sem fatura lançada</span>':'')+'</p></div>'
+      + '<button class="fechar" id="fechar" aria-label="Fechar">✕</button></div><div class="corpo">';
+    if(u.corte) html += '<div class="alerta" style="cursor:default"><span class="ic">!</span><span><b>Risco de corte</b><span>'+esc(u.corte)+'</span></span></div>';
+    if(u.totAberto) html += '<div class="bloco" style="padding:16px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="color:var(--tinta2)">Em aberto</span><b class="num" style="font-family:var(--display);font-size:28px">'+brl(u.totAberto)+'</b></div>'
+      + (u.totVencido && u.totAVencer ? '<div class="barra-dupla" style="height:12px;margin-top:10px"><span style="width:'+(u.totVencido/u.totAberto*100)+'%;background:var(--vencida)"></span><span style="width:'+(u.totAVencer/u.totAberto*100)+'%;background:var(--avencer)"></span></div>' : '') + '</div>';
+    html += '<div class="copias">'
+      + (u.matricula ? '<button class="copia" data-copia="'+esc(u.matricula)+'"><span><small>Matrícula</small><b>'+esc(u.matricula)+'</b></span><span class="selo neutro">Copiar</span></button>' : '<div class="copia"><small>Matrícula</small><b>não consta</b></div>')
+      + (u.doc ? '<button class="copia" data-copia="'+esc(u.doc)+'"><span><small>'+docT+'</small><b>'+esc(u.doc)+'</b></span><span class="selo neutro">Copiar</span></button>' : '<div class="copia"><small>Titular</small><b>não consta</b></div>')
+      + '</div>';
+    if(u.fornecedor === "CASAN") html += '<a class="botao" href="'+esc(window.ECASAN)+'" target="_blank" rel="noopener">Abrir o eCasan</a><p class="dica">Copie a matrícula e o documento e cole no login.</p>';
+    if(u.faturas.length){
+      html += '<div class="bloco"><h2>Faturas</h2><table class="tbl" style="margin-top:8px">' + u.faturas.slice().reverse().map(function(f){
+        return '<tr><td><b>'+lbMesL(f.mes)+'</b> <span class="selo '+f.status+'">'+(f.status==="vencida"?f.atraso+' dias de atraso':'a vencer')+'</span><small>vence '+esc(f.venc)+(f.m3!=null?' · '+f.m3+' m³':'')+(f.media6!=null?' · média 6 meses '+f.media6+' m³':'')+(f.nota?' · '+esc(f.nota):'')+'</small></td><td class="r">'+brl(f.valor)+'</td></tr>';
+      }).join("") + '</table></div>';
+    }
+    var ks = Object.keys(u.consumo).sort();
+    if(ks.length >= 2) html += '<div class="bloco"><h2>Consumo mês a mês</h2><p class="leg">Em m³, conforme o histórico impresso nas faturas.</p>' + graficoConsumo(u) + '</div>';
+    var pr = P.filter(function(p){ return semAc(p.congregacao) === semAc(u.nome); });
+    if(pr.length) html += '<div class="bloco"><h2>Protocolos</h2>' + pr.map(protHTML).join("") + '</div>';
+    if(u.obs) html += '<div class="insight">'+esc(u.obs)+'</div>';
+    html += '</div></aside>';
+    $("fichaHost").innerHTML = html;
+    requestAnimationFrame(function(){ $("veu").classList.add("on"); $("ficha").classList.add("on"); });
+    $("veu").onclick = fecharFicha; $("fechar").onclick = fecharFicha; $("fechar").focus();
+  }
+  function fecharFicha(){
+    var f = $("ficha"), v = $("veu"); if(!f) return;
+    f.classList.remove("on"); v.classList.remove("on");
+    setTimeout(function(){ $("fichaHost").innerHTML = ""; }, 280);
+  }
+  function graficoConsumo(u){
+    var ks = Object.keys(u.consumo).sort().slice(-12), vals = ks.map(function(k){ return u.consumo[k]; });
+    var max = Math.max.apply(null, vals.concat([1]));
+    var med = vals.slice(0,-1).reduce(function(a,b){return a+b;},0)/Math.max(1,vals.length-1);
+    return '<div class="colunas">' + ks.map(function(k,i){
+      var v = u.consumo[k], alto = i === ks.length-1 && vals.length > 2 && v >= med*1.5 && v-med >= 3;
+      return '<div class="col"><span class="rt">'+v+'</span><span class="b'+(alto?' vencida':(i===ks.length-1?'':' fraco'))+'" style="height:'+Math.max(3,v/max*82)+'%"></span></div>';
+    }).join("") + '</div><div class="eixo">' + ks.map(function(k){ return '<span>'+MES[+k.slice(5)-1]+'</span>'; }).join("") + '</div>';
+  }
+
+  /* ---------- relatórios ---------- */
+  function rel(){
+    var temF = U.some(function(u){ return u.faturas.length; });
+    $("relVazio").innerHTML = temF ? "" : '<div class="bloco"><h2>Ainda sem faturas lançadas</h2><p class="leg">Os relatórios se montam sozinhos quando as faturas forem lançadas. Quer ver como vão ficar?</p><button class="botao" data-previa="1">Ver prévia com números fictícios</button></div>';
+    ["r-aberto","r-atraso","r-ranking","r-pareto","r-pico","r-tendencia","r-m3","r-composicao","r-agenda","r-cobertura"].forEach(function(id){ $(id).hidden = !temF; });
+    if(!temF) return;
+    var F = []; U.forEach(function(u){ u.faturas.forEach(function(f){ F.push({u:u, f:f}); }); });
+    var vencido = 0, aVencer = 0; F.forEach(function(x){ if(x.f.status==="vencida") vencido += x.f.valor||0; else aVencer += x.f.valor||0; });
+    var total = vencido + aVencer || 1;
+
+    /* 1. em aberto */
+    $("r-aberto").innerHTML = '<h2>Quanto está em aberto</h2><p class="leg">Soma de todas as faturas pendentes lançadas.</p>'
+      + '<div style="font-family:var(--display);font-size:36px;font-weight:800" class="num">'+brl(vencido+aVencer)+'</div>'
+      + '<div class="barra-dupla" style="margin-top:10px"><span style="width:'+(vencido/total*100)+'%;background:var(--vencida)"></span><span style="width:'+(aVencer/total*100)+'%;background:var(--avencer)"></span></div>'
+      + '<div class="legenda"><span><i style="background:var(--vencida)"></i>Vencido <b class="num">'+brl(vencido)+'</b></span><span><i style="background:var(--avencer)"></i>A vencer <b class="num">'+brl(aVencer)+'</b></span></div>'
+      + '<div class="insight"><b>'+Math.round(vencido/total*100)+'%</b> do valor em aberto já passou do vencimento.</div>';
+
+    /* 2. atraso (envelhecimento) */
+    var faixas = [["Até 30 dias",0,30],["31 a 60",31,60],["61 a 90",61,90],["Mais de 90",91,99999]];
+    var fx = faixas.map(function(fa){ var l = F.filter(function(x){ return x.f.status==="vencida" && x.f.atraso>=fa[1] && x.f.atraso<=fa[2]; }); return {n:fa[0], v:l.reduce(function(s,x){return s+(x.f.valor||0);},0), q:l.length}; });
+    var maxFx = Math.max.apply(null, fx.map(function(x){ return x.v; }).concat([1]));
+    var velho = fx[2].v + fx[3].v;
+    $("r-atraso").innerHTML = '<h2>Há quanto tempo está vencido</h2><p class="leg">Quanto mais tempo, maior o risco de corte e de negativação.</p>'
+      + (vencido ? '<div class="colunas">' + fx.map(function(x,i){ return '<div class="col"><span class="rt">'+(x.v?brl0(x.v):'—')+'</span><span class="b vencida" style="height:'+Math.max(x.v?4:0,x.v/maxFx*80)+'%;opacity:'+(.45+i*.18)+'"></span></div>'; }).join("") + '</div><div class="eixo">' + fx.map(function(x){ return '<span>'+x.n+'<br><b>'+x.q+'</b> fat.</span>'; }).join("") + '</div>'
+        + (velho ? '<div class="insight"><b>'+brl(velho)+'</b> está vencido há mais de 60 dias. É o que mais pesa no risco de corte.</div>' : '<div class="insight">Nada vencido há mais de 60 dias.</div>')
+        : vazio("Nenhuma fatura vencida."));
+
+    /* 3. ranking */
+    var rk = U.filter(function(u){ return u.totAberto; }).sort(function(a,b){ return b.totAberto-a.totAberto; });
+    $("r-ranking").innerHTML = '<h2>Quem deve mais</h2><p class="leg">Valor em aberto por congregação. Vermelho é vencido, amarelo é a vencer.</p>' + barrasAberto(rk.slice(0,10));
+
+    /* 4. concentração */
+    var acum = 0, totA = rk.reduce(function(s,u){ return s+u.totAberto; },0) || 1, top3 = rk.slice(0,3).reduce(function(s,u){ return s+u.totAberto; },0);
+    var cores = ["var(--vencida)","var(--avencer)","var(--agua)","var(--agua-vivo)","var(--ok)"];
+    var fat = rk.slice(0,5).map(function(u,i){ return {n:u.nome, v:u.totAberto, c:cores[i]}; });
+    var resto = totA - fat.reduce(function(s,x){ return s+x.v; },0); if(resto > 0.005) fat.push({n:"Demais", v:resto, c:"var(--neutro-bg)"});
+    $("r-pareto").innerHTML = '<h2>Onde está concentrado</h2><p class="leg">Fatia de cada congregação no total em aberto.</p><div class="anel">'+anel(fat, totA)+'<div class="lst">'
+      + fat.map(function(x){ return '<div><span><i style="background:'+x.c+'"></i>'+esc(x.n)+'</span><b class="num">'+Math.round(x.v/totA*100)+'%</b></div>'; }).join("") + '</div></div>'
+      + (rk.length > 3 ? '<div class="insight">As <b>3 maiores</b> somam <b>'+Math.round(top3/totA*100)+'%</b> do total. Resolver essas resolve a maior parte do problema.</div>' : '');
+
+    /* 5. pico vs média */
+    var pc = [];
+    U.forEach(function(u){ var f = u.ultima; if(f && f.m3 != null && f.media6){ pc.push({u:u, f:f, r:f.m3/f.media6}); } });
+    pc.sort(function(a,b){ return b.r-a.r; });
+    var altos = pc.filter(function(x){ return x.r >= 1.3; });
+    $("r-pico").innerHTML = '<h2>Consumo acima da média</h2><p class="leg">Última fatura comparada com a média dos 6 meses impressa na própria fatura. A CASAN avisa quando passa de 30%.</p>'
+      + (pc.length ? '<div class="hb">' + pc.slice(0,8).map(function(x){
+          var w = Math.min(100, x.r/Math.max(2, pc[0].r)*100);
+          return '<button class="hb-l" data-u="'+esc(x.u.nome)+'" style="border:0;background:none;padding:0;text-align:left;width:100%"><span class="n">'+esc(x.u.nome)+'</span><span class="v" style="color:'+(x.r>=1.3?'var(--vencida)':'var(--tinta)')+'">'+(x.r>=1?'+':'')+Math.round((x.r-1)*100)+'%</span>'
+            + '<span class="t"><span class="'+(x.r>=1.3?'vencida':'')+'" style="width:'+w+'%"></span></span><span class="s">'+x.f.m3+' m³ em '+lbMes(x.f.mes)+' · média '+x.f.media6+' m³</span></button>';
+        }).join("") + '</div>' + (altos.length ? '<div class="insight"><b>'+altos.length+'</b> congregaç'+(altos.length===1?'ão está':'ões estão')+' 30% ou mais acima da própria média. Vale procurar vazamento antes de pagar ou contestar.</div>' : '<div class="insight">Nenhuma congregação passou 30% da própria média.</div>')
+        : vazio("Aparece quando as faturas trouxerem a média dos 6 meses."));
+
+    /* 6. tendência */
+    var td = [];
+    U.forEach(function(u){ var ks = Object.keys(u.consumo).sort(); if(ks.length >= 4){ var v = ks.map(function(k){ return u.consumo[k]; }); var a = v.slice(0,Math.floor(v.length/2)), b = v.slice(Math.floor(v.length/2)); var ma = a.reduce(function(s,x){return s+x;},0)/a.length, mb = b.reduce(function(s,x){return s+x;},0)/b.length; td.push({u:u, v:v, ks:ks, d: ma ? (mb-ma)/ma : 0}); } });
+    td.sort(function(a,b){ return b.d-a.d; });
+    $("r-tendencia").innerHTML = '<h2>Para onde o consumo está indo</h2><p class="leg">Compara a metade mais recente do histórico com a mais antiga.</p>'
+      + (td.length ? '<table class="tbl">' + td.slice(0,8).map(function(x){
+          return '<tr><td style="width:45%"><b>'+esc(x.u.nome)+'</b><small>'+x.ks.length+' meses</small></td><td>'+spark(x.v, x.d > .3)+'</td><td class="r" style="color:'+(x.d>.3?'var(--vencida)':x.d<-.2?'var(--ok)':'var(--tinta)')+'">'+(x.d>0?'▲ ':x.d<0?'▼ ':'')+Math.abs(Math.round(x.d*100))+'%</td></tr>';
+        }).join("") + '</table>' : vazio("Aparece quando houver histórico de consumo nas faturas."));
+
+    /* 7. custo por m³ */
+    var cm = [];
+    U.forEach(function(u){ var f = u.ultima; if(f && f.m3 > 0 && f.valor){ cm.push({u:u, f:f, c:f.valor/f.m3}); } });
+    cm.sort(function(a,b){ return b.c-a.c; });
+    var acima10 = U.filter(function(u){ return u.ultima && u.ultima.m3 > 10; }).length;
+    $("r-m3").innerHTML = '<h2>Quanto custa cada m³</h2><p class="leg">Valor da última fatura dividido pelo consumo. Acima de 10 m³ a tarifa por m³ sobe de faixa, e a água vem junto com o esgoto.</p>'
+      + (cm.length ? '<table class="tbl">' + cm.slice(0,8).map(function(x){ return '<tr><td><b>'+esc(x.u.nome)+'</b><small>'+x.f.m3+' m³ · '+brl(x.f.valor)+'</small></td><td class="r">'+brl(x.c)+'/m³</td></tr>'; }).join("") + '</table>'
+        + '<div class="insight"><b>'+acima10+'</b> congregaç'+(acima10===1?'ão passou':'ões passaram')+' de 10 m³ na última fatura e já paga'+(acima10===1?'':'m')+' a faixa mais cara.</div>' : vazio("Aparece quando as faturas tiverem valor e consumo."));
+
+    /* 8. composição */
+    var comp = {agua:0, esgoto:0, fixa:0, outros:0};
+    F.forEach(function(x){ var f = x.f; comp.agua += f.agua||0; comp.esgoto += f.esgoto||0; comp.fixa += f.fixa||0; comp.outros += f.outros||0; });
+    var tc = comp.agua+comp.esgoto+comp.fixa+comp.outros;
+    $("r-composicao").innerHTML = '<h2>Do que é feito o valor</h2><p class="leg">Soma das linhas impressas nas faturas lançadas.</p>'
+      + (tc ? '<div class="barra-dupla"><span style="width:'+(comp.agua/tc*100)+'%;background:var(--agua)"></span><span style="width:'+(comp.esgoto/tc*100)+'%;background:var(--agua-vivo)"></span><span style="width:'+(comp.fixa/tc*100)+'%;background:var(--avencer)"></span><span style="width:'+(comp.outros/tc*100)+'%;background:var(--neutro)"></span></div>'
+        + '<div class="legenda"><span><i style="background:var(--agua)"></i>Água '+brl0(comp.agua)+'</span><span><i style="background:var(--agua-vivo)"></i>Esgoto '+brl0(comp.esgoto)+'</span><span><i style="background:var(--avencer)"></i>Tarifa fixa '+brl0(comp.fixa)+'</span>'+(comp.outros?'<span><i style="background:var(--neutro)"></i>Parcelas e outros '+brl0(comp.outros)+'</span>':'')+'</div>'
+        + '<div class="insight">O esgoto é cobrado em cima do mesmo volume da água. Cada m³ economizado reduz <b>as duas linhas</b>.</div>' : vazio("Aparece quando as faturas tiverem o detalhamento de água, esgoto e tarifa fixa."));
+
+    /* 9. agenda */
+    var ag = F.slice().sort(function(a,b){ return a.f.vencISO < b.f.vencISO ? -1 : 1; });
+    $("r-agenda").innerHTML = '<h2>Calendário de pagamentos</h2><p class="leg">Todas as faturas pendentes por data de vencimento.</p>' + agenda(ag);
+
+    /* 10. cobertura */
+    var com = U.filter(function(u){ return u.faturas.length; }).length;
+    $("r-cobertura").innerHTML = '<h2>Levantamento do mês</h2><p class="leg">Quantas congregações já têm fatura lançada.</p>'
+      + '<div class="barra-dupla"><span style="width:'+(com/U.length*100)+'%;background:var(--agua)"></span></div>'
+      + '<div class="legenda"><span><i style="background:var(--agua)"></i><b>'+com+'</b> com fatura</span><span><i style="background:var(--fundo);border:1px solid var(--linha)"></i><b>'+(U.length-com)+'</b> sem fatura lançada</span></div>';
+  }
+  function anel(fatias, total){
+    var R = 54, C = 2*Math.PI*R, off = 0, s = '<svg width="150" height="150" viewBox="0 0 150 150" role="img" aria-label="Concentração do valor em aberto"><circle cx="75" cy="75" r="'+R+'" fill="none" stroke="var(--fundo)" stroke-width="22"/>';
+    fatias.forEach(function(f){ var l = f.v/total*C; s += '<circle cx="75" cy="75" r="'+R+'" fill="none" stroke="'+f.c+'" stroke-width="22" stroke-dasharray="'+Math.max(0,l-2)+' '+C+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 75 75)"/>'; off += l; });
+    return s + '<text x="75" y="72" text-anchor="middle" font-family="Bricolage Grotesque, sans-serif" font-weight="800" font-size="17" fill="var(--tinta)">'+(total>=1000?'R$ '+n1(total/1000)+' mil':brl0(total))+'</text><text x="75" y="92" text-anchor="middle" font-size="12.5" fill="var(--tinta2)">em aberto</text></svg>';
+  }
+  function spark(v, alto){
+    var W = 120, H = 36, max = Math.max.apply(null, v), min = Math.min.apply(null, v), sp = (max-min) || 1;
+    var pts = v.map(function(x,i){ return [4 + i*(W-8)/(v.length-1), H-4-(x-min)/sp*(H-8)]; });
+    var d = pts.map(function(p,i){ return (i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1); }).join(" ");
+    var cor = alto ? "var(--vencida)" : "var(--agua)", e = pts[pts.length-1];
+    return '<svg class="spark" viewBox="0 0 '+W+' '+H+'" aria-hidden="true"><path d="'+d+' L'+e[0]+' '+(H-4)+' L4 '+(H-4)+' Z" fill="'+cor+'" opacity=".14"/><path d="'+d+'" fill="none" stroke="'+cor+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="'+e[0]+'" cy="'+e[1]+'" r="3.6" fill="'+cor+'"/></svg>';
+  }
+
+  /* ---------- protocolos ---------- */
+  var PST = {aguardando:["Aguardando","a-vencer"], revisao:["Em revisão","a-vencer"], deferido:["Deferido","ok"], indeferido:["Negado","vencida"], concluido:["Concluído","ok"]};
+  function protHTML(p){
+    var st = PST[p.status] || ["—","neutro"];
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--linha)"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><b>'+esc(p.protocolo)+'</b><span class="selo '+st[1]+'">'+st[0]+'</span></div>'
+      + '<p style="margin:4px 0 8px;color:var(--tinta2);font-size:16px">'+esc(p.tipo)+' · aberto em '+esc(p.abertura)+'</p><p style="margin:0 0 8px;font-size:16.5px">'+esc(p.resumo||"")+'</p>'
+      + ((p.emails||[]).length ? '<div style="display:flex;flex-wrap:wrap;gap:8px">' + p.emails.map(function(e){ return '<a class="selo neutro" style="text-decoration:none;font-size:15px;padding:6px 12px" href="'+esc(e.url)+'" target="_blank" rel="noopener">✉ '+esc(e.rotulo)+'</a>'; }).join("") + '</div>' : '') + '</div>';
+  }
+  function protocolos(){
+    $("protos").innerHTML = P.length ? P.map(function(p){ return '<div class="bloco"><h2 style="font-size:19px">'+esc(p.congregacao)+'</h2>'+protHTML(p)+'</div>'; }).join("")
+      : '<div class="bloco">'+vazio("Nenhum protocolo registrado. Quando você abrir um pedido na CASAN, me passe o número que eu acompanho as respostas no seu e-mail.")+'</div>';
+  }
+
+  /* ---------- navegação e eventos ---------- */
+  var TELAS = ["inicio","igrejas","relatorios","protocolos"], atual = "inicio";
+  function ir(t){
+    if(TELAS.indexOf(t) < 0) t = "inicio"; atual = t;
+    TELAS.forEach(function(x){ $("t-"+x).hidden = x !== t; });
+    Array.prototype.forEach.call(document.querySelectorAll(".aba"), function(b){ b.setAttribute("aria-pressed", String(b.getAttribute("data-t") === t)); });
+    if(t === "inicio") inicio(); if(t === "igrejas") igrejas(); if(t === "relatorios") rel(); if(t === "protocolos") protocolos();
+  }
+  function barraPrevia(){
+    var h = previa ? '<div class="prevbar">Versão de demonstração: nomes reais, matrículas e valores fictícios</div>' : "";
+    ["prevbar1","prevbar2","prevbar3","prevbar4"].forEach(function(id){ $(id).innerHTML = h; });
+  }
+  var tT = null;
+  function toast(m){ var e = $("toast"); e.textContent = m; e.hidden = false; clearTimeout(tT); tT = setTimeout(function(){ e.hidden = true; }, 2200); }
+
+  document.addEventListener("click", function(e){
+    var b;
+    if((b = e.target.closest("[data-copia]"))){
+      var v = b.getAttribute("data-copia");
+      try{ navigator.clipboard.writeText(v).then(function(){ b.classList.add("ok"); toast("Copiado: " + v); setTimeout(function(){ b.classList.remove("ok"); }, 1500); }, function(){ toast("Segure o texto para copiar"); }); }catch(err){ toast("Segure o texto para copiar"); }
+      return;
+    }
+    if((b = e.target.closest("[data-u]"))){ abrirFicha(b.getAttribute("data-u")); return; }
+    if((b = e.target.closest("[data-t]"))){ var t = b.getAttribute("data-t"); try{ history.replaceState(null,"","#"+t); }catch(err){} ir(t); window.scrollTo(0,0); return; }
+    if((b = e.target.closest("[data-f]"))){ filtro = b.getAttribute("data-f"); igrejas(); return; }
+    if(e.target.closest("[data-previa]")){ previa = true; carregar(); barraPrevia(); ir(atual); window.scrollTo(0,0); return; }
+    if(e.target.closest("[data-sairprevia]")){ previa = false; carregar(); barraPrevia(); ir(atual); return; }
+  });
+  $("q").addEventListener("input", function(e){ termo = e.target.value; igrejas(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape") fecharFicha(); });
+  window.addEventListener("hashchange", function(){ ir(location.hash.slice(1)); });
+
+  $("atual").textContent = "Projeto de João Marcos Rodrigues Barbosa · github.com/Marcosdev0109/painel-agua";
+  carregar(); barraPrevia(); ir(location.hash.slice(1));
+})();
+</script>
+</body>
+</html>
