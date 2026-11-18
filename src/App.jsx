@@ -4,13 +4,14 @@ import { gerarDemo, DOCUMENTO_FICTICIO } from "./data/demo.js";
 import { hojeISO } from "./lib/formato.js";
 import { prepararUnidades } from "./lib/regras.js";
 import { AvisoDemo } from "./components/Comuns.jsx";
-import Abas from "./components/Abas.jsx";
+import Abas, { TELAS } from "./components/Abas.jsx";
 import Inicio from "./components/Inicio.jsx";
 import Igrejas from "./components/Igrejas.jsx";
 import Ficha from "./components/Ficha.jsx";
+import Relatorios from "./components/Relatorios.jsx";
+import Protocolos from "./components/Protocolos.jsx";
 
-const DISPONIVEIS = ["inicio", "igrejas"];
-const telaDoEndereco = () => (DISPONIVEIS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "inicio");
+const telaDoEndereco = () => (TELAS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "inicio");
 
 export default function App() {
   const [tela, setTela] = useState(telaDoEndereco);
@@ -51,9 +52,11 @@ export default function App() {
           <AvisoDemo />
           {tela === "inicio" && <Inicio />}
           {tela === "igrejas" && <Igrejas />}
+          {tela === "relatorios" && <Relatorios />}
+          {tela === "protocolos" && <Protocolos />}
         </section>
       </div>
-      <Abas atual={tela} aoTrocar={trocar} disponiveis={DISPONIVEIS} />
+      <Abas atual={tela} aoTrocar={trocar} />
       {unidadeAberta && <Ficha key={unidadeAberta.nome} u={unidadeAberta} aoFechar={() => setAberta(null)} avisar={setAviso} />}
       {aviso && <div className="toast" role="status">{aviso}</div>}
     </PainelContext.Provider>
