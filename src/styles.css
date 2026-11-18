@@ -231,3 +231,14 @@ button.alerta:active{background:var(--papel)}
 .dia-btn{border:0;border-bottom:1px solid var(--linha);background:none;text-align:left;width:100%}
 .hb-btn{border:0;background:none;padding:0;text-align:left;width:100%}
 .prevbar{justify-content:center}
+.aberto-linha{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.aberto-linha span{color:var(--tinta2)}
+.aberto-linha b{font-family:var(--display);font-size:28px}
+.prot{padding:10px 0;border-bottom:1px solid var(--linha)}
+.prot:last-child{border-bottom:0}
+.prot-cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.prot-meta{margin:4px 0 8px;color:var(--tinta2);font-size:16px}
+.prot-resumo{margin:0 0 8px;font-size:16.5px}
+.prot-emails{display:flex;flex-wrap:wrap;gap:8px}
+.prot-emails a{text-decoration:none;font-size:15px;padding:6px 12px}
+.ficha .corpo > *{flex-shrink:0}

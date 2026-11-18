@@ -7,12 +7,15 @@ import { AvisoDemo } from "./components/Comuns.jsx";
 import Abas from "./components/Abas.jsx";
 import Inicio from "./components/Inicio.jsx";
 import Igrejas from "./components/Igrejas.jsx";
+import Ficha from "./components/Ficha.jsx";
 
 const DISPONIVEIS = ["inicio", "igrejas"];
 const telaDoEndereco = () => (DISPONIVEIS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "inicio");
 
 export default function App() {
   const [tela, setTela] = useState(telaDoEndereco);
+  const [aberta, setAberta] = useState(null); // nome da congregação com a ficha aberta
+  const [aviso, setAviso] = useState("");
 
   const dados = useMemo(() => {
     const hoje = hojeISO();
@@ -32,7 +35,14 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const contexto = { ...dados, abrir: () => {} };
+  useEffect(() => {
+    if (!aviso) return;
+    const t = setTimeout(() => setAviso(""), 2200);
+    return () => clearTimeout(t);
+  }, [aviso]);
+
+  const contexto = { ...dados, abrir: setAberta };
+  const unidadeAberta = dados.unidades.find((u) => u.nome === aberta);
 
   return (
     <PainelContext.Provider value={contexto}>
@@ -44,6 +54,8 @@ export default function App() {
         </section>
       </div>
       <Abas atual={tela} aoTrocar={trocar} disponiveis={DISPONIVEIS} />
+      {unidadeAberta && <Ficha key={unidadeAberta.nome} u={unidadeAberta} aoFechar={() => setAberta(null)} avisar={setAviso} />}
+      {aviso && <div className="toast" role="status">{aviso}</div>}
     </PainelContext.Provider>
   );
 }
