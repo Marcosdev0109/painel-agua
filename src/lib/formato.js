@@ -5,6 +5,8 @@ const MES_LONGO = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "
 
 export const brl = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 export const brl0 = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+// Valores grandes em formato curto para caber em cartões pequenos: "R$ 10,4 mil".
+export const brlCurto = (v) => (v >= 10000 ? "R$ " + (v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mil" : brl0(v));
 export const n1 = (v) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 
 // "2026-10" -> "out/26" e "outubro de 2026"
